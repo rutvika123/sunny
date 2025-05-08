@@ -1,0 +1,230 @@
+Bully algorithm
+
+
+import java.util.Scanner;
+
+class BullyAlgorithm {
+    private int numProcesses;          // Total number of processes
+    private int coordinator;           // The current coordinator
+    private boolean[] activeProcesses; // Tracks active processes
+
+    
+    // Constructor to initialize processes and set the coordinator
+    public BullyAlgorithm(int numProcesses, int initialCoordinator) {
+        this.numProcesses = numProcesses;
+        this.activeProcesses = new boolean[numProcesses];
+
+        // All processes are initially active
+        for (int i = 0; i < numProcesses; i++) {
+            activeProcesses[i] = true;
+        }
+
+        // Set the initial coordinator provided by the user
+        if (initialCoordinator >= 0 && initialCoordinator < numProcesses) {
+            coordinator = initialCoordinator;
+            System.out.println("Initial Coordinator: Process " + coordinator);
+        } else {
+            System.out.println("Invalid process ID for coordinator. Defaulting to last process as coordinator.");
+            coordinator = numProcesses - 1;  // Default to last process if invalid ID
+        }
+    }
+
+    // Start the election from a given process
+    public void startElection(int initiator) {
+        System.out.println("\nProcess " + initiator + " is starting an election...");
+
+        // Step 1: Send ELECTION messages to higher-numbered processes
+        for (int i = initiator + 1; i < numProcesses; i++) {
+            if (activeProcesses[i]) {
+                System.out.println("Process " + initiator + " -> Process " + i + " (ELECTION)");
+            }
+        }
+
+        // Step 2: Simulate OK responses
+        simulateElectionResponses(initiator);
+
+        // Step 3: Determine the new coordinator
+        determineCoordinator(initiator);
+    }
+
+    // Simulate OK responses from higher processes
+    private void simulateElectionResponses(int initiator) {
+        System.out.println("\nWaiting for OK responses...");
+        for (int i = initiator + 1; i < numProcesses; i++) {
+            if (i == numProcesses - 1) {
+                System.out.println("Process " + i + " has crashed and does not respond.");
+            } else {
+                System.out.println("Process " + i + " -> Process " + initiator + " (OK)");
+            }
+        }
+    }
+
+    // Determine the new coordinator after responses
+    private void determineCoordinator(int initiator) {
+        boolean newCoordinatorFound = false;
+
+        // Check if any higher process takes over the election
+        for (int i = initiator + 1; i < numProcesses; i++) {
+            if (i == numProcesses - 1) {
+                continue; // Skip the crashed process
+            }
+            if (i > initiator) {
+                System.out.println("Process " + i + " takes over the election.");
+                startElection(i);  // Higher process takes over
+                newCoordinatorFound = true;
+                return;
+            }
+        }
+
+        // If no higher process takes over, the initiator wins the election
+        if (!newCoordinatorFound) {
+            coordinator = initiator;
+            System.out.println("Process " + coordinator + " wins the election and becomes the new coordinator.");
+            announceNewCoordinator();
+        }
+    }
+
+    // Announce the new coordinator to all other active processes
+    private void announceNewCoordinator() {
+        for (int i = 0; i < numProcesses; i++) {
+            if (i != coordinator && activeProcesses[i]) {
+                System.out.println("Process " + coordinator + " -> Process " + i + " (COORDINATOR)");
+            }
+        }
+    }
+
+    // Main method
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter the number of processes: ");
+        int numProcesses = scanner.nextInt();
+
+        System.out.print("Enter the initial coordinator process ID: ");
+        int initialCoordinator = scanner.nextInt();
+
+        BullyAlgorithm bully = new BullyAlgorithm(numProcesses, initialCoordinator);
+
+        System.out.print("Enter the process to start the election: ");
+        int initiator = scanner.nextInt();
+
+        if (initiator >= 0 && initiator < numProcesses) {
+            bully.startElection(initiator);
+        } else {
+            System.out.println("Invalid process ID.");
+        }
+
+
+
+
+
+import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.List;
+
+class RingElection {
+    private int numProcesses;
+    private int coordinator;
+    private boolean[] activeProcesses;
+
+    public RingElection(int numProcesses, int initialCoordinator) {
+        this.numProcesses = numProcesses;
+        this.activeProcesses = new boolean[numProcesses];
+
+        for (int i = 0; i < numProcesses; i++) {
+            activeProcesses[i] = true;
+        }
+
+        if (initialCoordinator >= 0 && initialCoordinator < numProcesses) {
+            coordinator = initialCoordinator;
+            System.out.println("Initial Coordinator: Process " + coordinator);
+            activeProcesses[coordinator] = false;
+            System.out.println("Process " + coordinator + " has crashed (Initial Coordinator).");
+        } else {
+            System.out.println("Invalid coordinator ID, defaulting to Process " + (numProcesses - 1));
+            coordinator = numProcesses - 1;
+        }
+    }
+
+    public void startElection(int initiator) {
+        System.out.println("\n✅ Process " + initiator + " is initiating an election...");
+
+        List<Integer> electionPath = new ArrayList<>();
+        electionPath.add(initiator);
+        System.out.println("Election path: " + electionPath);
+
+        int maxId = initiator;
+        int current = (initiator + 1) % numProcesses;
+
+        while (current != initiator) {
+            if (activeProcesses[current]) {
+                System.out.println("Process " + maxId + " -> Process " + current + " (ELECTION)");
+                electionPath.add(current);
+                System.out.println("Election path: " + electionPath);
+
+                if (current > maxId) {
+                    maxId = current;
+                }
+            } else {
+                System.out.println("Process " + current + " is skipped (CRASHED).");
+            }
+
+            current = (current + 1) % numProcesses;
+        }
+
+        coordinator = maxId;
+        System.out.println("\n🏆 Process " + coordinator + " wins the election and becomes the new coordinator.");
+        announceNewCoordinator();
+    }
+
+    private void announceNewCoordinator() {
+        int current = (coordinator + 1) % numProcesses;
+
+        while (current != coordinator) {
+            if (activeProcesses[current]) {
+                System.out.println("Process " + coordinator + " -> Process " + current + " (ELECTED)");
+            }
+            current = (current + 1) % numProcesses;
+        }
+    }
+
+    public boolean isActive(int processId) {
+        return processId >= 0 && processId < numProcesses && activeProcesses[processId];
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter the number of processes: ");
+        int numProcesses = scanner.nextInt();
+
+        System.out.print("Enter the initial coordinator process (0 to " + (numProcesses - 1) + "): ");
+        int initialCoordinator = scanner.nextInt();
+
+        RingElection ringElection = new RingElection(numProcesses, initialCoordinator);
+
+        int initiator;
+        while (true) {
+            System.out.print("\nEnter the process to start the election: ");
+            initiator = scanner.nextInt();
+
+            if (!ringElection.isActive(initiator)) {
+                System.out.println("⚠️ Process " + initiator + " is crashed and cannot initiate the election.");
+            } else {
+                break;
+            }
+        }
+
+        ringElection.startElection(initiator);
+        scanner.close();
+    }
+}
+
+
+
+
+        scanner.close();
+    }
+}
+
+
