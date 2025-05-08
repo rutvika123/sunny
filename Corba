@@ -1,0 +1,142 @@
+ReverseModule.idl
+
+module ReverseModule{
+interface Reverse
+{
+	string reverse_string(in string str);
+	string upper_string(in string str);
+};
+};
+
+Reverseimpl.java
+
+import ReverseModule.ReversePOA;
+import java.lang.String;
+
+class Reverseimpl extends ReversePOA {
+    Reverseimpl() {
+        super();
+        System.out.println("Reverse Object Created");
+    }
+
+    public String reverse_string(String name) {
+        StringBuffer str = new StringBuffer(name);
+        str.reverse();
+        return (("Server send: " + str));
+    }
+    public String upper_string(String name) {
+        String str = new String(name);
+        String str1=str.toUpperCase();
+        return (("Server send: " + str1));
+    }
+}
+
+ReverseServer.java
+
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextExtHelper;
+import org.omg.CosNaming.NamingContextPackage.*;
+import org.omg.CORBA.*;
+import org.omg.PortableServer.*;
+
+import ReverseModule.Reverse;
+
+class ReverseServer {
+    public static void main(String[] args) {
+
+        try {
+            org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init(args, null);
+            POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            rootPOA.the_POAManager().activate();
+            Reverseimpl rvr = new Reverseimpl();
+            org.omg.CORBA.Object ref = rootPOA.servant_to_reference(rvr);
+            System.out.println("Step 1");
+            Reverse h_ref = ReverseModule.ReverseHelper.narrow(ref);
+            System.out.println("Step 2");
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            System.out.println("Step 3");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+            System.out.println("Step 4");
+            String name = "Reverse";
+            NameComponent path[] = ncRef.to_name(name);
+            ncRef.rebind(path, h_ref);
+            System.out.println("Reverse Server Reading and Waiting...");
+            orb.run();
+        }
+
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+ReverseClient.java
+
+import ReverseModule.*;
+import org.omg.CosNaming.*;
+//import org.omg.NamingContextPackage.*;
+import org.omg.CORBA.*;
+import java.io.*;
+import java.lang.*;
+import java.util.*;
+
+class ReverseClient {
+    public static void main(String[] args) {
+        Reverse Reverseimpl = null;
+        try {
+            org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init(args, null);
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+            String name = "Reverse";
+            Reverseimpl = ReverseHelper.narrow(ncRef.resolve_str(name));
+            System.out.println("Enter String for reverse: ");
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            String str = br.readLine();
+            String tempStr = Reverseimpl.reverse_string(str);
+            System.out.println(tempStr);
+	   System.out.println("Enter String Uppercase: ");
+            //BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            String str1 = br.readLine();
+            tempStr = Reverseimpl.upper_string(str1);
+
+
+            System.out.println(tempStr);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Output
+
+bash: /home/itlab1-3/.bashrc: line 132: syntax error near unexpected token `newline'
+bash: /home/itlab1-3/.bashrc: line 132: ` <<< conda initialize <<<'
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ idlj -fall ReverseModule.idl
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ javac *.java ReverseModule/*.java
+Note: ReverseModule/ReversePOA.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ orbd -ORBInitialPort 1050&
+[1] 13558
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ java ReverseServer  -ORBInitialPort 1050 -ORBInitialHost localhost&
+[2] 13576
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ Reverse Object Created
+Step 1
+Step 2
+Step 3
+Step 4
+Reverse Server Reading and Waiting...
+^C
+  
+
+bash: /home/itlab1-3/.bashrc: line 132: syntax error near unexpected token `newline'
+bash: /home/itlab1-3/.bashrc: line 132: ` <<< conda initialize <<<'
+(base) itlab1-3@itlab13-OptiPlex-390:~/exp3$ java ReverseClient -ORBInitialPort 1050 -ORBInitialHost localhost
+Enter String for reverse:
+abcd
+Server send: dcba
+Enter String Uppercase:
+asddf
+Server send: ASDDF
